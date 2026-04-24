@@ -66,8 +66,15 @@ async function run() {
     const foodReviewCollection = database.collection('foodReview');
     
     //create a food review
-    app.post('/addReview', async (req, res) => {
+    app.post('/addReview',firebaseTokenVerification, async (req, res) => {
+      const userEmail = req.query.email;
+      
+      if (userEmail !== req.toke_email) {
+        return res.status(403).send({message:`provident`})
+      }
+      console.log(req.body)
       const review = req.body;
+      review.createAt=Date.now()
       const result = await foodReviewCollection.insertOne(review);
       res.send(result);
     })
