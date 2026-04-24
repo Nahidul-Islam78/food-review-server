@@ -5,6 +5,37 @@ const port = process.env.PORT || 3500;
 const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 dotenv.config()
+const admin = require('firebase-admin');
+
+const decoded = Buffer.from(
+  process.env.Firebase_Service_Key,
+  'base64',
+).toString('utf8');
+const serviceAccount = JSON.parse(decoded);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+//add firebase verify token middleware
+
+const firebaseTokenVerification = async(req,res,next) => {
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: `unauthorized access` });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: `unauthorized access` });
+  }
+  try {
+    const userInfo = await admin.auth().verifyIdToken(token);
+    req.toke_email = userInfo.email;
+    next();
+  } catch {
+    return res.status(401).send({ message: `unauthorized access` });
+  }
+}
+
 
 //add middleware
 app.use(cors());
@@ -45,6 +76,24 @@ async function run() {
       const cursor = foodReviewCollection.find({});
       const result = await cursor.toArray();
       res.send(result)
+    })
+    //get only user review
+    app.get('/myReview',firebaseTokenVerification, async (req, res) => {
+   
+      const userEmail = req.query.email;
+      
+      const query = {}
+      if (userEmail) {
+        if (userEmail !== req.toke_email) {
+          return res.status(403).send({ message: `provident` });
+        }
+        query.email = userEmail;
+      }
+      
+      const cursor = foodReviewCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result)
+      
     })
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 });
