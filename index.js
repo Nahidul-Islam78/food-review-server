@@ -95,6 +95,16 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
+    //get latest food review
+    app.get('/latestReview', async (req, res) => {
+      const query = {}
+      const latestReview = {
+        createAt: -1,
+      };
+      const cursor = foodReviewCollection.find(query).sort(latestReview).limit(3);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
     //get only user review
     app.get('/myReview',firebaseTokenVerification, async (req, res) => {
    
