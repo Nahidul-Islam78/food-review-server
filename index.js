@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const app = express();
 const port = process.env.PORT || 3500;
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 dotenv.config()
 const admin = require('firebase-admin');
 
@@ -80,7 +80,10 @@ async function run() {
     })
     //get all food review
     app.get('/allReview', async (req, res) => {
-      const cursor = foodReviewCollection.find({});
+      const latest = {
+        createAt: -1,
+      };
+      const cursor = foodReviewCollection.find({}).sort(latest);
       const result = await cursor.toArray();
       res.send(result)
     })
@@ -89,7 +92,7 @@ async function run() {
     app.get('/topReview', async (req, res) => {
       const query = {};
       const topReview = {
-        starRating: -1
+        starRating: -1,
       };
       const cursor = foodReviewCollection.find(query).sort(topReview).limit(6);
       const result = await cursor.toArray();
@@ -123,6 +126,13 @@ async function run() {
       res.send(result)
       
     })
+    //delete review
+    app.delete('/deleteReview/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)};
+      const result = foodReviewCollection.deleteOne(query);
+      res.send(result);
+    })
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 });
     console.log(
@@ -131,7 +141,7 @@ async function run() {
   } finally {
     // Ensures that the client will close when you finish/error
   
-  }
+  } 
 }
 run().catch(console.dir);
 app.listen(port);
