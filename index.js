@@ -10,12 +10,7 @@ const admin = require('firebase-admin');
 //add middleware
 
 
-app.use(
-  cors({
-    origin: ['https://food-review-a0715.web.app'],
-    credentials: true,
-  }),
-);
+app.use(cors());
 app.use(express.json())
   
 
