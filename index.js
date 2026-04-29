@@ -64,6 +64,7 @@ async function run() {
     await client.connect();
     const database = client.db('foodReview');
     const foodReviewCollection = database.collection('foodReview');
+    const favoriteReviewCollection=database.collection('favoriteReview')
     
     //create a food review
     app.post('/addReview',firebaseTokenVerification, async (req, res) => {
@@ -77,6 +78,13 @@ async function run() {
       review.createAt=Date.now()
       const result = await foodReviewCollection.insertOne(review);
       res.send(result);
+    })
+    // create favorite review
+    app.post('/favoriteReview', async (req, res) => {
+      console.log(req.body) 
+      const favoriteReview = req.body;
+      const result = await favoriteReviewCollection.insertOne(favoriteReview);
+      res.send(result)
     })
     //get all food review
     app.get('/allReview', async (req, res) => {
@@ -133,7 +141,7 @@ async function run() {
       const result = foodReviewCollection.deleteOne(query);
       res.send(result);
     })
-    //update review 
+    //update review  
     app.patch('/updateReview/:id', async (req, res) => {
       const id = req.params.id;
       const updatedReview = req.body;
