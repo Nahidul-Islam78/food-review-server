@@ -7,6 +7,19 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 dotenv.config()
 const admin = require('firebase-admin');
 
+//add middleware
+
+
+app.use(
+  cors({
+    origin: ['https://food-review-a0715.web.app'],
+    credentials: true,
+  }),
+);
+app.use(express.json())
+  
+
+//decode firebase service account
 const decoded = Buffer.from(
   process.env.Firebase_Service_Key,
   'base64',
@@ -37,15 +50,13 @@ const firebaseTokenVerification = async(req,res,next) => {
 }
 
 
-//add middleware
-app.use(cors());
-app.use(express.json())
 
+//root api
 app.get('/', (req, res) => {
   res.send('food review')
 })
 
-//mongodb
+//set mongodb uri
 
 const uri = `mongodb+srv://${process.env.User_Name}:${process.env.User_Password}@cluster0.hnqoonm.mongodb.net/?appName=Cluster0`;
 
@@ -62,31 +73,49 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+    // create collection
     const database = client.db('foodReview');
     const foodReviewCollection = database.collection('foodReview');
     const favoriteReviewCollection=database.collection('favoriteReview')
     
-    //create a food review
+    //create a food review api
     app.post('/addReview',firebaseTokenVerification, async (req, res) => {
       const userEmail = req.query.email;
       
       if (userEmail !== req.toke_email) {
         return res.status(403).send({message:`provident`})
       }
-      console.log(req.body)
+      
       const review = req.body;
       review.createAt=Date.now()
       const result = await foodReviewCollection.insertOne(review);
       res.send(result);
     })
-    // create favorite review
+
+    // create favorite review api 
     app.post('/favoriteReview', async (req, res) => {
-      console.log(req.body) 
+      
       const favoriteReview = req.body;
       const result = await favoriteReviewCollection.insertOne(favoriteReview);
       res.send(result)
     })
-    //get all food review
+
+    //get favorite review api 
+    app.get('/favoriteReview',firebaseTokenVerification, async (req, res) => {
+      const userEmail = req.query.email;
+      const query = {}
+       if (userEmail) {
+         if (userEmail !== req.toke_email) {
+           return res.status(403).send({ message: `provident` });
+         }
+         query.email = userEmail;
+       }
+      const cursor = favoriteReviewCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    //get all food review api 
     app.get('/allReview', async (req, res) => {
       const latest = {
         createAt: -1,
@@ -95,8 +124,19 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result)
     })
-    //get top rated food review
 
+    //get single review api 
+    app.get('/reviewDetails/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        _id: new ObjectId(id)
+      }
+      const cursor = foodReviewCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    //get top rated food review
     app.get('/topReview', async (req, res) => {
       const query = {};
       const topReview = {
@@ -106,6 +146,8 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
+
+
     //get latest food review
     app.get('/latestReview', async (req, res) => {
       const query = {}
@@ -116,6 +158,8 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
+
+
     //get only user review
     app.get('/myReview',firebaseTokenVerification, async (req, res) => {
    
@@ -134,14 +178,18 @@ async function run() {
       res.send(result)
       
     })
-    //delete review
+
+
+    //delete review api
     app.delete('/deleteReview/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id)};
       const result = foodReviewCollection.deleteOne(query);
       res.send(result);
-    })
-    //update review  
+    })  
+
+
+    //update review  api 
     app.patch('/updateReview/:id', async (req, res) => {
       const id = req.params.id;
       const updatedReview = req.body;
@@ -152,7 +200,7 @@ async function run() {
     })
 
     // Send a ping to confirm a successful connection
-    await client.db('admin').command({ ping: 1 });
+    // await client.db('admin').command({ ping: 1 });
     console.log(
       'Pinged your deployment. You successfully connected to MongoDB!',
     );
